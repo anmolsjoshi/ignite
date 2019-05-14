@@ -33,6 +33,7 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 from ignite.engine import Events, create_supervised_trainer, create_supervised_evaluator
 from ignite.metrics import Accuracy, Loss
 from ignite.contrib.handlers.tensorboard_logger import *
+from ignite.contrib.handlers import CustomPeriodicEvent
 
 
 LOG_INTERVAL = 10
@@ -87,8 +88,11 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_dir):
 
     train_evaluator = create_supervised_evaluator(model, metrics=metrics, device=device)
     validation_evaluator = create_supervised_evaluator(model, metrics=metrics, device=device)
+    
+    cpe = CustomPeriodicEvent(n_iterations=500)
+    cpe.attach(trainer)
 
-    @trainer.on(Events.EPOCH_COMPLETED)
+    @trainer.on(cpe.Events.ITERATIONS_500_COMPLETED)
     def compute_metrics(engine):
         train_evaluator.run(train_loader)
         validation_evaluator.run(val_loader)
@@ -103,13 +107,13 @@ def run(train_batch_size, val_batch_size, epochs, lr, momentum, log_dir):
                      log_handler=OutputHandler(tag="training",
                                                metric_names=["loss", "accuracy"],
                                                another_engine=trainer),
-                     event_name=Events.EPOCH_COMPLETED)
+                     event_name=cpe.Events.ITERATIONS_500_COMPLETED)
 
     tb_logger.attach(validation_evaluator,
                      log_handler=OutputHandler(tag="validation",
                                                metric_names=["loss", "accuracy"],
                                                another_engine=trainer),
-                     event_name=Events.EPOCH_COMPLETED)
+                     event_name=cpe.Events.ITERATIONS_500_COMPLETED)
 
     tb_logger.attach(trainer,
                      log_handler=OptimizerParamsHandler(optimizer),

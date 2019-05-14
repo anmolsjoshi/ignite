@@ -45,15 +45,22 @@ class OutputHandler(BaseOutputHandler):
     def __init__(self, tag, metric_names=None, output_transform=None, another_engine=None):
         super(OutputHandler, self).__init__(tag, metric_names, output_transform, another_engine)
 
-    def __call__(self, engine, logger, event_name):
+    def __call__(self, engine, logger, event_name, true_engine=None):
 
         if not isinstance(logger, TensorboardLogger):
             raise RuntimeError("Handler 'OutputHandler' works only with TensorboardLogger")
 
-        metrics = self._setup_output_metrics(engine)
+        engine_to_use = true_engine if true_engine else engine
+        
+        metrics = self._setup_output_metrics(engine_to_use)
 
-        state = engine.state if self.another_engine is None else self.another_engine.state
+        state = engine_to_use.state if self.another_engine is None else self.another_engine.state
         global_step = state.get_event_attrib_value(event_name)
+        
+        if true_engine:
+            print('trainer.state.iteration = ', engine.state.iteration)
+            print('global_step = ', global_step)
+            print('true_engine.state.iteration = ', true_engine.state.iteration)
 
         for key, value in metrics.items():
             if isinstance(value, numbers.Number) or \

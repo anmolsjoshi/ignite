@@ -25,8 +25,11 @@ class BaseLogger(object):
         """
         if event_name not in State.event_to_attr:
             raise RuntimeError("Unknown event name '{}'".format(event_name))
-
-        engine.add_event_handler(event_name, log_handler, self, event_name)
+        
+        if hasattr(log_handler, 'another_engine') and log_handler.another_engine is not None:
+            log_handler.another_engine.add_event_handler(event_name, log_handler, self, event_name, engine)
+        else:
+            engine.add_event_handler(event_name, log_handler, self, event_name) 
 
     def __enter__(self):
         return self
