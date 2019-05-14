@@ -26,6 +26,29 @@ class BaseLogger(object):
         if event_name not in State.event_to_attr:
             raise RuntimeError("Unknown event name '{}'".format(event_name))
         
+        
+        # This is very hacky. Why does this need to be done? 
+        # another_engine is used in cases of evaluator, such that attach parameters are as follows
+        # engine=evaluator, another_engine=trainer
+        
+        # It is important to note that event_name here is tied to engine, not another_engine
+        # If we were to add to custom event on trainer to run evaluations, an error would be thrown that the
+        # the custom event does not exist for evaluator
+        
+        # We were to attach that custom event to evaluator, it would not give accurate results as metrics would
+        # only be output at the end of evaluator.run() i.e. EPOCH_COMPLETED, this it will first return an empty
+        # dictionary and when custom event surpasses EPOCH_COMPLETED, it'll paste the correct metrics, this is not
+        # the expect behaviour
+        
+        # What does the code below do?
+        # It attaches an event_handler to another_engine and passes engine (evaluator) as a parameter, this will be
+        # accepted as true_engine (default None) in OutputHandler, which will use the evaluator metrics at whatever
+        # intervals of CustomPeriodicEvent
+        
+        # I have updated code in tensorboard_logger.py to ensure this behavior is tracked (only using print statements)
+        # can't check on tensorboard at this time.
+        
+        # Note that user will never have to input true_engine, this currently works with the existing API
         if hasattr(log_handler, 'another_engine') and log_handler.another_engine is not None:
             log_handler.another_engine.add_event_handler(event_name, log_handler, self, event_name, engine)
         else:
