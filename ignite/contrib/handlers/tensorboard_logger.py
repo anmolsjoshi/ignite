@@ -1,4 +1,6 @@
 import numbers
+from pkg_resources import get_distribution
+from packaging import version
 
 import warnings
 import torch
@@ -405,7 +407,13 @@ class TensorboardLogger(BaseLogger):
             raise RuntimeError("This contrib module requires tensorboardX to be installed. "
                                "Please install it with command: \n pip install tensorboardX")
 
-        self.writer = SummaryWriter(logdir=log_dir)
+        self.log_dir = log_dir
+
+        if version.parse(get_distribution("tensorboardX").version) < version.parse("1.7"):
+            warnings.warn("Support for tensorboardX versions below 1.7 will be discontinued in 0.3.0.", FutureWarning)
+            self.writer = SummaryWriter(log_dir=self.log_dir)
+        else:
+            self.writer = SummaryWriter(logdir=self.log_dir)
 
     def close(self):
         self.writer.close()
